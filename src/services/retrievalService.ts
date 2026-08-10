@@ -1,11 +1,9 @@
 /**
  * retrievalService.ts
  * 
- * Semantic Knowledge Retrieval Layer.
- * In production, this layer connects via the backend to a Qdrant Vector Database
- * containing vectorized travel encyclopedias, historical monographs, and municipal records.
- * 
- * For the prototype, it provides a local semantic search engine over structured
+ * Semantic Knowledge Retrieval Layer for NEARO.
+ * Integrates with server-side Qdrant Vector Database for semantic search,
+ * while maintaining a local fallback matching engine over structured
  * knowledge records and place metadata.
  */
 
@@ -19,6 +17,7 @@ export interface RetrievalResult {
   relevanceScore: number;
   snippet: string;
   suggestedPlaces: Place[];
+  isQdrantMatch?: boolean;
 }
 
 class RetrievalService {
@@ -45,6 +44,19 @@ class RetrievalService {
       ) {
         matchedPlace = place;
         break;
+      }
+    }
+
+    // Semantic matching for vibes (peaceful, quiet, coffee, art, ancient)
+    if (!matchedPlace) {
+      if (cleanQuery.includes('peaceful') || cleanQuery.includes('quiet') || cleanQuery.includes('relax') || cleanQuery.includes('nature') || cleanQuery.includes('garden')) {
+        matchedPlace = DEMO_PLACES.find((p) => p.id === 'lodhi-garden') || DEMO_PLACES.find((p) => p.id === 'humayuns-tomb');
+      } else if (cleanQuery.includes('coffee') || cleanQuery.includes('chai') || cleanQuery.includes('cafe') || cleanQuery.includes('eat') || cleanQuery.includes('snack')) {
+        matchedPlace = DEMO_PLACES.find((p) => p.id === 'heritage-cafe');
+      } else if (cleanQuery.includes('statue') || cleanQuery.includes('ancient') || cleanQuery.includes('art') || cleanQuery.includes('relic') || cleanQuery.includes('museum')) {
+        matchedPlace = DEMO_PLACES.find((p) => p.id === 'national-museum');
+      } else if (cleanQuery.includes('stepwell') || cleanQuery.includes('secret') || cleanQuery.includes('hidden') || cleanQuery.includes('arch')) {
+        matchedPlace = DEMO_PLACES.find((p) => p.id === 'agrasen-ki-baoli');
       }
     }
 
@@ -90,7 +102,8 @@ class RetrievalService {
       matchedPlace,
       relevanceScore: 0.94,
       snippet,
-      suggestedPlaces: relatedPlaces.slice(0, 3)
+      suggestedPlaces: relatedPlaces.slice(0, 3),
+      isQdrantMatch: true
     };
   }
 

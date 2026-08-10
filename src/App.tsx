@@ -129,30 +129,35 @@ export default function App() {
         setVoiceState('speaking');
         setIsPaused(false);
 
-        // Speak the answer aloud via Text-to-Speech
-        ttsService.speak(result.spokenText, userPreferences.language, {
-          onStart: () => {
-            setVoiceState('speaking');
-            setIsPaused(false);
+        // Speak the answer aloud via Text-to-Speech (Rime with Web Speech fallback)
+        ttsService.speak(
+          result.spokenText,
+          userPreferences.language,
+          {
+            onStart: () => {
+              setVoiceState('speaking');
+              setIsPaused(false);
+            },
+            onEnd: () => {
+              setVoiceState('idle');
+              setAmplitudes([0.3, 0.4, 0.3, 0.2, 0.3]);
+            },
+            onPause: () => {
+              setIsPaused(true);
+            },
+            onResume: () => {
+              setIsPaused(false);
+            },
+            onError: (err) => {
+              console.warn('TTS playback issue:', err);
+              setVoiceState('idle');
+            },
+            onWaveformUpdate: (bands) => {
+              setAmplitudes(bands);
+            }
           },
-          onEnd: () => {
-            setVoiceState('idle');
-            setAmplitudes([0.3, 0.4, 0.3, 0.2, 0.3]);
-          },
-          onPause: () => {
-            setIsPaused(true);
-          },
-          onResume: () => {
-            setIsPaused(false);
-          },
-          onError: (err) => {
-            console.warn('TTS playback issue:', err);
-            setVoiceState('idle');
-          },
-          onWaveformUpdate: (bands) => {
-            setAmplitudes(bands);
-          }
-        });
+          userPreferences.voiceSpeaker || 'orion'
+        );
       } catch (err: any) {
         console.warn('Voice query failed:', err);
         setErrorMessage("I couldn't process that query. Please tap to try again.");

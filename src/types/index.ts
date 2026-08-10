@@ -6,6 +6,16 @@ export type VoiceState = 'idle' | 'listening' | 'thinking' | 'speaking' | 'error
 
 export type LanguageCode = 'en' | 'hi' | 'es' | 'fr';
 
+export type RimeSpeaker = 'orion' | 'celeste' | 'abbey' | 'allison' | 'amber' | 'colin';
+
+export interface RimeVoiceOption {
+  id: RimeSpeaker;
+  name: string;
+  gender: 'male' | 'female' | 'neutral';
+  tone: string;
+  description: string;
+}
+
 export interface LanguageOption {
   code: LanguageCode;
   name: string;
@@ -36,6 +46,7 @@ export interface UserPreferences {
   language: LanguageCode;
   interests: InterestCategory[];
   tourStyle: TourStyle;
+  voiceSpeaker?: RimeSpeaker;
   accessibility: AccessibilitySettings;
 }
 
@@ -89,16 +100,38 @@ export interface VisualCardData {
   imageUrl?: string;
   distance?: string;
   badge?: string;
+  queryId?: string;
+}
+
+export interface RetrievalMetrics {
+  qdrantConnected: boolean;
+  similarityScore?: number;
+  memoriesRecalled?: number;
+  retrievalLatencyMs?: number;
+  intent?: string;
+  matchedPlaceId?: string;
+}
+
+export interface RetrievalFeedback {
+  queryId: string;
+  query: string;
+  placeId?: string;
+  placeName?: string;
+  rating: 'positive' | 'negative';
+  relevanceScore?: number;
+  timestamp: number;
 }
 
 export interface VoiceQueryResult {
+  queryId?: string;
   answer: string;
   spokenText: string;
   location: string;
   relatedPlaces: Place[];
   suggestedQuestions: string[];
   visualCard?: VisualCardData;
-  source?: 'gemini' | 'knowledge_base' | 'demo';
+  source?: 'gemini' | 'knowledge_base' | 'qdrant' | 'demo';
+  retrievalMetrics?: RetrievalMetrics;
 }
 
 export interface KnowledgeItem {
@@ -114,3 +147,4 @@ export interface KnowledgeItem {
   tags: string[];
   relatedAttractions: string[];
 }
+

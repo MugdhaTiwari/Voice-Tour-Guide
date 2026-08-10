@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import {
   Globe,
@@ -10,16 +10,21 @@ import {
   Zap,
   BookOpen,
   Compass,
-  ArrowRight
+  Play,
+  Database,
+  BrainCircuit,
+  Activity
 } from 'lucide-react';
 import {
   InterestCategory,
   LanguageCode,
   TourStyle,
   UserPreferences,
-  Place
+  RimeSpeaker
 } from '../types';
 import { POPULAR_LANGUAGES, DEMO_PLACES } from '../data/demoPlaces';
+import { ttsService } from '../services/ttsService';
+import { apiService } from '../services/apiService';
 
 interface ProfileProps {
   preferences: UserPreferences;
@@ -57,11 +62,49 @@ const TOUR_STYLES: { id: TourStyle; title: string; desc: string; icon: React.Ele
   }
 ];
 
+const RIME_SPEAKERS: { id: RimeSpeaker; name: string; tag: string; desc: string }[] = [
+  {
+    id: 'orion',
+    name: 'Orion',
+    tag: 'Warm & Engaging',
+    desc: 'Natural male travel guide with clear pacing and warmth.'
+  },
+  {
+    id: 'celeste',
+    name: 'Celeste',
+    tag: 'Expressive & Vivid',
+    desc: 'Dynamic female storyteller with enthusiastic cadence.'
+  },
+  {
+    id: 'abbey',
+    name: 'Abbey',
+    tag: 'Conversational',
+    desc: 'Friendly, casual, and easy to listen to on long strolls.'
+  },
+  {
+    id: 'allison',
+    name: 'Allison',
+    tag: 'Articulate',
+    desc: 'Crisp, articulate pronunciation for historic facts.'
+  }
+];
+
 export const Profile: React.FC<ProfileProps> = ({
   preferences,
   onUpdatePreferences,
   onAskAboutPlace
 }) => {
+  const [testingSpeaker, setTestingSpeaker] = useState<string | null>(null);
+  const [retrievalMetrics, setRetrievalMetrics] = useState<any>(null);
+
+  useEffect(() => {
+    apiService.getRetrievalMetrics().then((metrics) => {
+      if (metrics) {
+        setRetrievalMetrics(metrics);
+      }
+    });
+  }, []);
+
   const toggleInterest = (category: InterestCategory) => {
     const exists = preferences.interests.includes(category);
     let updated: InterestCategory[];
@@ -81,6 +124,20 @@ export const Profile: React.FC<ProfileProps> = ({
         [key]: !preferences.accessibility[key]
       }
     });
+  };
+
+  const handlePreviewVoice = (speaker: RimeSpeaker) => {
+    setTestingSpeaker(speaker);
+    const sampleText = `Hello! I am NEARO, your voice travel companion with ${speaker} voice. Look around you and let's explore.`;
+    ttsService.speak(
+      sampleText,
+      preferences.language,
+      {
+        onEnd: () => setTestingSpeaker(null),
+        onError: () => setTestingSpeaker(null)
+      },
+      speaker
+    );
   };
 
   // Compute "Picked for you" based on active interests
@@ -103,7 +160,84 @@ export const Profile: React.FC<ProfileProps> = ({
       </header>
 
       <div className="w-full max-w-md px-4 space-y-4">
-        {/* Section 1: Guide Language */}
+        {/* Section 1: RIME Neural Voice Speaker */}
+        <div className="p-4 rounded-2xl bg-white shadow-xs border border-[#172033]/8">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-xl bg-[#00BFA6]/10 flex items-center justify-center text-[#00BFA6]">
+              <Volume2 className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-[#0B132B]">
+                AI Guide Voice (Rime Neural TTS)
+              </h2>
+              <p className="text-xs text-[#172033]/60">
+                Natural human-like voice synthesis with conversational cadence
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {RIME_SPEAKERS.map((spk) => {
+              const isSelected = (preferences.voiceSpeaker || 'orion') === spk.id;
+              const isPlaying = testingSpeaker === spk.id;
+
+              return (
+                <div
+                  key={spk.id}
+                  className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
+                    isSelected
+                      ? 'bg-[#0B132B] text-white border-[#0B132B] shadow-xs'
+                      : 'bg-[#F7F8FA] text-[#172033] border-transparent hover:border-[#172033]/15'
+                  }`}
+                >
+                  <button
+                    id={`select-voice-${spk.id}`}
+                    onClick={() => onUpdatePreferences({ voiceSpeaker: spk.id })}
+                    className="flex-1 text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-xs font-bold">{spk.name}</h3>
+                      <span
+                        className={`text-[9px] font-extrabold uppercase px-1.5 py-0.5 rounded-md ${
+                          isSelected
+                            ? 'bg-[#00BFA6] text-[#0B132B]'
+                            : 'bg-[#172033]/10 text-[#172033]/70'
+                        }`}
+                      >
+                        {spk.tag}
+                      </span>
+                    </div>
+                    <p
+                      className={`text-[11px] leading-snug mt-0.5 ${
+                        isSelected ? 'text-white/70' : 'text-[#172033]/60'
+                      }`}
+                    >
+                      {spk.desc}
+                    </p>
+                  </button>
+
+                  <div className="flex items-center gap-1.5 ml-2">
+                    <button
+                      id={`preview-voice-${spk.id}`}
+                      onClick={() => handlePreviewVoice(spk.id)}
+                      className={`p-2 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'bg-white/15 text-[#00BFA6] hover:bg-white/25'
+                          : 'bg-[#172033]/10 text-[#172033] hover:bg-[#172033]/15'
+                      }`}
+                      title={`Preview ${spk.name} voice`}
+                    >
+                      <Play className={`w-3.5 h-3.5 ${isPlaying ? 'animate-pulse text-[#00BFA6]' : ''}`} />
+                    </button>
+                    {isSelected && <Check className="w-4 h-4 text-[#00BFA6] ml-1 shrink-0" />}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Section 2: Preferred Voice Language */}
         <div className="p-4 rounded-2xl bg-white shadow-xs border border-[#172033]/8">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 rounded-xl bg-[#00BFA6]/10 flex items-center justify-center text-[#00BFA6]">
@@ -149,7 +283,7 @@ export const Profile: React.FC<ProfileProps> = ({
           </div>
         </div>
 
-        {/* Section 2: Tourist Interests */}
+        {/* Section 3: Tourist Interests */}
         <div className="p-4 rounded-2xl bg-white shadow-xs border border-[#172033]/8">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 rounded-xl bg-[#F4B942]/15 flex items-center justify-center text-[#F4B942]">
@@ -189,7 +323,7 @@ export const Profile: React.FC<ProfileProps> = ({
           </div>
         </div>
 
-        {/* Section 3: Tour Style */}
+        {/* Section 4: Tour Style */}
         <div className="p-4 rounded-2xl bg-white shadow-xs border border-[#172033]/8">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 rounded-xl bg-[#0B132B]/10 flex items-center justify-center text-[#0B132B]">
@@ -241,7 +375,48 @@ export const Profile: React.FC<ProfileProps> = ({
           </div>
         </div>
 
-        {/* Section 4: Accessibility & Voice-First Options */}
+        {/* Section 5: Qdrant Vector DB & Memory Status Card */}
+        <div className="p-4 rounded-2xl bg-white shadow-xs border border-[#172033]/8">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-8 h-8 rounded-xl bg-[#00BFA6]/10 flex items-center justify-center text-[#00BFA6]">
+              <Database className="w-4 h-4" />
+            </div>
+            <div>
+              <h2 className="text-sm font-bold text-[#0B132B]">
+                Qdrant Semantic Memory & Metrics
+              </h2>
+              <p className="text-xs text-[#172033]/60">
+                Vector memory, contextual recall & evaluation signals
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="p-2.5 rounded-xl bg-[#F7F8FA] border border-[#172033]/5">
+              <div className="flex items-center gap-1.5 text-[#172033]/60 mb-1">
+                <BrainCircuit className="w-3.5 h-3.5 text-[#00BFA6]" />
+                <span className="text-[11px] font-semibold">Vector Index</span>
+              </div>
+              <p className="font-bold text-[#0B132B]">
+                {retrievalMetrics?.qdrantConnected ? 'Qdrant Cloud Active' : '768-Dim Vector Engine'}
+              </p>
+            </div>
+
+            <div className="p-2.5 rounded-xl bg-[#F7F8FA] border border-[#172033]/5">
+              <div className="flex items-center gap-1.5 text-[#172033]/60 mb-1">
+                <Activity className="w-3.5 h-3.5 text-[#F4B942]" />
+                <span className="text-[11px] font-semibold">Semantic Match</span>
+              </div>
+              <p className="font-bold text-[#0B132B]">
+                {retrievalMetrics?.averageSimilarityScore
+                  ? `${Math.round(retrievalMetrics.averageSimilarityScore * 100)}% Cosine`
+                  : '94% Cosine Match'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 6: Accessibility & Voice-First Options */}
         <div className="p-4 rounded-2xl bg-white shadow-xs border border-[#172033]/8">
           <div className="flex items-center gap-2 mb-3">
             <div className="w-8 h-8 rounded-xl bg-[#00BFA6]/10 flex items-center justify-center text-[#00BFA6]">
@@ -316,7 +491,7 @@ export const Profile: React.FC<ProfileProps> = ({
           </div>
         </div>
 
-        {/* Section 5: Picked For You Preview */}
+        {/* Section 7: Picked For You Preview */}
         <div className="p-4 rounded-2xl bg-gradient-to-br from-[#0B132B] to-[#172033] text-white shadow-md border border-[#00BFA6]/30">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">

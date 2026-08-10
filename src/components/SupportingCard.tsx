@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { MapPin, Sparkles, Volume2, ArrowRight } from 'lucide-react';
+import { MapPin, Sparkles, Volume2, ArrowRight, ThumbsUp, ThumbsDown, Check } from 'lucide-react';
 import { VisualCardData } from '../types';
+import { apiService } from '../services/apiService';
 
 interface SupportingCardProps {
   cardData: VisualCardData;
@@ -14,6 +15,20 @@ export const SupportingCard: React.FC<SupportingCardProps> = ({
   onAskAboutPlace,
   onExploreNearby
 }) => {
+  const [feedbackGiven, setFeedbackGiven] = useState<'positive' | 'negative' | null>(null);
+
+  const handleFeedback = (rating: 'positive' | 'negative') => {
+    setFeedbackGiven(rating);
+    apiService.submitRetrievalFeedback({
+      queryId: cardData.queryId || `qry_${Date.now()}`,
+      query: `Query about ${cardData.title}`,
+      placeId: cardData.placeId,
+      placeName: cardData.title,
+      rating,
+      timestamp: Date.now()
+    });
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16, scale: 0.98 }}
@@ -61,6 +76,37 @@ export const SupportingCard: React.FC<SupportingCardProps> = ({
               <p className="text-xs text-[#172033]/60 font-medium">
                 {cardData.subtitle}
               </p>
+            </div>
+
+            {/* Subtle Qdrant Evaluation / Feedback Button */}
+            <div className="flex items-center gap-1 bg-[#F7F8FA] p-1 rounded-lg border border-[#172033]/5">
+              {feedbackGiven ? (
+                <span className="flex items-center gap-1 text-[10px] text-[#00BFA6] font-bold px-1">
+                  <Check className="w-3 h-3" />
+                  <span>Saved</span>
+                </span>
+              ) : (
+                <>
+                  <button
+                    id="feedback-thumbs-up"
+                    onClick={() => handleFeedback('positive')}
+                    className="p-1 hover:text-[#00BFA6] text-[#172033]/50 transition-colors cursor-pointer"
+                    title="Helpful recommendation"
+                    aria-label="Helpful recommendation"
+                  >
+                    <ThumbsUp className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    id="feedback-thumbs-down"
+                    onClick={() => handleFeedback('negative')}
+                    className="p-1 hover:text-red-500 text-[#172033]/50 transition-colors cursor-pointer"
+                    title="Not relevant"
+                    aria-label="Not relevant"
+                  >
+                    <ThumbsDown className="w-3.5 h-3.5" />
+                  </button>
+                </>
+              )}
             </div>
           </div>
 
